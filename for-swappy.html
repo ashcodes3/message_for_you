@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🔒 A Message For You</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Caveat:wght@500;700&display=swap');
+
+  :root {
+    --bg-dark: #0a0a1a;
+    --accent: #7c5cfc;
+    --accent-glow: #a78bfa;
+    --gold: #f5c842;
+    --text: #e2e8f0;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    min-height: 100vh;
+    background: var(--bg-dark);
+    font-family: 'Poppins', sans-serif;
+    color: var(--text);
+    overflow-x: hidden;
+  }
+
+  /* ── starfield canvas ── */
+  #stars { position: fixed; inset: 0; z-index: 0; }
+
+  /* ── lock screen ── */
+  .lock-screen {
+    position: fixed; inset: 0; z-index: 10;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    background: linear-gradient(160deg, #0a0a1a 0%, #1a1035 50%, #0a0a1a 100%);
+    transition: opacity .8s ease, transform .8s ease;
+  }
+  .lock-screen.unlocked {
+    opacity: 0; transform: scale(1.1);
+    pointer-events: none;
+  }
+
+  .lock-icon {
+    width: 90px; height: 90px;
+    border: 3px solid var(--accent-glow);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 28px;
+    animation: pulse-ring 2s ease-in-out infinite;
+    position: relative;
+  }
+  .lock-icon svg { width: 40px; height: 40px; fill: var(--accent-glow); }
+  @keyframes pulse-ring {
+    0%,100% { box-shadow: 0 0 0 0 rgba(124,92,252,.4); }
+    50%     { box-shadow: 0 0 0 18px rgba(124,92,252,0); }
+  }
+
+  .lock-screen h2 {
+    font-weight: 300; font-size: 1.1rem;
+    letter-spacing: 3px; text-transform: uppercase;
+    color: #94a3b8; margin-bottom: 32px;
+  }
+
+  /* digit boxes */
+  .code-wrapper { display: flex; gap: 10px; margin-bottom: 10px; }
+  .code-box {
+    width: 46px; height: 56px;
+    background: rgba(255,255,255,.06);
+    border: 2px solid rgba(124,92,252,.3);
+    border-radius: 10px;
+    text-align: center; font-size: 1.5rem;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600; color: #fff;
+    caret-color: var(--accent-glow);
+    outline: none;
+    transition: border-color .2s, box-shadow .2s, transform .15s;
+  }
+  .code-box:focus {
+    border-color: var(--accent-glow);
+    box-shadow: 0 0 16px rgba(124,92,252,.35);
+    transform: translateY(-2px);
+  }
+  .code-box.shake {
+    animation: shake .45s ease;
+    border-color: #ef4444;
+  }
+  .code-box.correct {
+    border-color: #22c55e;
+    box-shadow: 0 0 14px rgba(34,197,94,.4);
+  }
+  @keyframes shake {
+    0%,100% { transform: translateX(0); }
+    20%     { transform: translateX(-8px); }
+    40%     { transform: translateX(8px); }
+    60%     { transform: translateX(-6px); }
+    80%     { transform: translateX(6px); }
+  }
+
+  .hint {
+    margin-top: 16px; font-size: .82rem; color: #64748b;
+    letter-spacing: 1px;
+  }
+  .error-msg {
+    margin-top: 12px; font-size: .85rem;
+    color: #ef4444; min-height: 22px;
+    transition: opacity .3s;
+  }
+
+  /* ── message page ── */
+  .message-page {
+    position: relative; z-index: 5;
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 40px 20px;
+    opacity: 0; transform: translateY(40px);
+    transition: opacity 1s ease .5s, transform 1s ease .5s;
+  }
+  .message-page.visible {
+    opacity: 1; transform: translateY(0);
+  }
+
+  .letter-card {
+    background: linear-gradient(145deg, rgba(30,20,60,.85), rgba(15,15,35,.9));
+    border: 1px solid rgba(124,92,252,.2);
+    border-radius: 24px;
+    max-width: 660px; width: 100%;
+    padding: 48px 44px;
+    box-shadow: 0 30px 80px rgba(0,0,0,.5), 0 0 60px rgba(124,92,252,.08);
+    position: relative;
+    overflow: hidden;
+  }
+  .letter-card::before {
+    content: '';
+    position: absolute; top: -1px; left: 40px; right: 40px; height: 3px;
+    background: linear-gradient(90deg, transparent, var(--accent-glow), var(--gold), var(--accent-glow), transparent);
+    border-radius: 0 0 4px 4px;
+  }
+
+  .greeting {
+    font-family: 'Caveat', cursive;
+    font-size: 2.2rem; font-weight: 700;
+    color: var(--gold);
+    margin-bottom: 24px;
+  }
+
+  .letter-body p {
+    font-size: 1.02rem; line-height: 1.85;
+    color: #cbd5e1; margin-bottom: 16px;
+    font-weight: 300;
+  }
+  .letter-body p strong { color: #fff; font-weight: 500; }
+
+  .marathi {
+    font-size: 1.15rem; line-height: 2;
+    color: var(--gold);
+    text-align: center;
+    margin: 28px 0;
+    padding: 20px;
+    border-left: 3px solid rgba(245,200,66,.3);
+    border-right: 3px solid rgba(245,200,66,.3);
+    font-style: italic;
+  }
+
+  .sign-off {
+    margin-top: 32px;
+    text-align: right;
+  }
+  .sign-off p {
+    font-size: .95rem; color: #94a3b8;
+    margin-bottom: 4px; font-weight: 300;
+  }
+  .sign-off .name {
+    font-family: 'Caveat', cursive;
+    font-size: 2rem; color: var(--accent-glow);
+    font-weight: 700;
+  }
+
+  .emoji-float {
+    position: fixed; font-size: 1.6rem;
+    animation: floatUp 4s ease-out forwards;
+    pointer-events: none; z-index: 100;
+  }
+  @keyframes floatUp {
+    0%   { opacity: 1; transform: translateY(0) scale(1); }
+    100% { opacity: 0; transform: translateY(-420px) scale(1.5); }
+  }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(124,92,252,.3); border-radius: 3px; }
+
+  @media (max-width: 600px) {
+    .letter-card { padding: 32px 22px; }
+    .greeting { font-size: 1.7rem; }
+    .code-box { width: 38px; height: 48px; font-size: 1.2rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- star canvas -->
+<canvas id="stars"></canvas>
+
+<!-- ── LOCK SCREEN ── -->
+<div class="lock-screen" id="lockScreen">
+  <div class="lock-icon">
+    <svg viewBox="0 0 24 24"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1s3.1 1.39 3.1 3.1v2z"/></svg>
+  </div>
+  <h2>Enter 8-Digit Passkey</h2>
+  <div class="code-wrapper" id="codeWrapper"></div>
+  <p class="hint">This message is locked with a secret code</p>
+  <p class="error-msg" id="errorMsg">&nbsp;</p>
+</div>
+
+<!-- ── MESSAGE PAGE ── -->
+<div class="message-page" id="messagePage">
+  <div class="letter-card">
+    <div class="greeting">Bonjour Swappy the Boss 👋</div>
+    <div class="letter-body">
+      <p>
+        Thank you for the message — it genuinely means a lot.
+        Will miss the fun and talks we ever had.
+        <strong>Always my go-to person</strong> when it comes to anything in
+        tech, game, AI, and career.
+      </p>
+      <p>
+        Just a <strong>3DSWYM chat away till 8th Jan</strong> and thereafter
+        just a text away. 💬
+      </p>
+      <p>
+        One of my motivation to stay in DS resigned and the other is now
+        following his dreams.
+      </p>
+      <p>
+        I genuinely wish you the best — may your work and effort get
+        recognized here in the new team. <strong>Please show off your work
+        to management and climb heights — sky is the limit.</strong> 🚀
+      </p>
+      <p>Hopeful to stay in touch.</p>
+      <p>See me come to swim in <strong>REDFORT</strong> everyday. 🏊</p>
+      <p style="margin-top: 24px; color: #94a3b8; font-size: .92rem;">
+        least but not the least…
+      </p>
+      <div class="marathi">
+        आकाशी झेप घे रे पाखरा 🕊️<br>
+        सोडी सोन्याचा पिंजरा
+      </div>
+      <p>Thank you… lots of love and respect ❤️</p>
+      <p><strong>See you soon in some MAANG company 😄</strong></p>
+    </div>
+    <div class="sign-off">
+      <p>With love,</p>
+      <div class="name">AKI60</div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── Starfield ── */
+(function(){
+  const c = document.getElementById('stars'), ctx = c.getContext('2d');
+  let w, h, stars = [];
+  function resize(){ w = c.width = innerWidth; h = c.height = innerHeight; }
+  function init(){ stars = Array.from({length: 180}, ()=>({
+    x: Math.random()*w, y: Math.random()*h,
+    r: Math.random()*1.4+.3, a: Math.random(), d: Math.random()*.005+.002
+  })); }
+  function draw(){
+    ctx.clearRect(0,0,w,h);
+    stars.forEach(s=>{
+      s.a += s.d; if(s.a>1||s.a<0) s.d=-s.d;
+      ctx.beginPath(); ctx.arc(s.x,s.y,s.r,0,Math.PI*2);
+      ctx.fillStyle=`rgba(200,200,255,${s.a})`; ctx.fill();
+    });
+    requestAnimationFrame(draw);
+  }
+  addEventListener('resize', ()=>{ resize(); init(); });
+  resize(); init(); draw();
+})();
+
+/* ── Passcode Logic ── */
+const SECRET = '58243971';
+const wrapper = document.getElementById('codeWrapper');
+const boxes = [];
+
+for(let i=0;i<8;i++){
+  const inp = document.createElement('input');
+  inp.type='tel'; inp.maxLength=1; inp.className='code-box';
+  inp.setAttribute('autocomplete','off');
+  inp.addEventListener('input', onInput);
+  inp.addEventListener('keydown', onKey);
+  inp.addEventListener('paste', onPaste);
+  wrapper.appendChild(inp);
+  boxes.push(inp);
+}
+boxes[0].focus();
+
+function onInput(e){
+  const v = e.target.value.replace(/\D/g,'');
+  e.target.value = v;
+  if(v && e.target.nextElementSibling) e.target.nextElementSibling.focus();
+  checkCode();
+}
+function onKey(e){
+  if(e.key==='Backspace' && !e.target.value && e.target.previousElementSibling){
+    e.target.previousElementSibling.focus();
+  }
+}
+function onPaste(e){
+  e.preventDefault();
+  const data = (e.clipboardData||window.clipboardData).getData('text').replace(/\D/g,'').slice(0,8);
+  data.split('').forEach((ch,i)=>{ if(boxes[i]) boxes[i].value=ch; });
+  if(boxes[data.length]) boxes[data.length].focus();
+  checkCode();
+}
+
+function checkCode(){
+  const code = boxes.map(b=>b.value).join('');
+  if(code.length<8) return;
+
+  if(code===SECRET){
+    boxes.forEach(b=>b.classList.add('correct'));
+    spawnEmojis();
+    setTimeout(unlock, 700);
+  } else {
+    boxes.forEach(b=>b.classList.add('shake'));
+    document.getElementById('errorMsg').textContent='Wrong passkey — try again';
+    setTimeout(()=>{
+      boxes.forEach(b=>{ b.classList.remove('shake'); b.value=''; });
+      boxes[0].focus();
+    }, 500);
+    setTimeout(()=>{ document.getElementById('errorMsg').innerHTML='&nbsp;'; }, 2500);
+  }
+}
+
+function unlock(){
+  document.getElementById('lockScreen').classList.add('unlocked');
+  document.getElementById('messagePage').classList.add('visible');
+}
+
+function spawnEmojis(){
+  const emojiSet=['🎉','✨','💜','🚀','🌟','💫','🕊️','❤️'];
+  for(let i=0;i<14;i++){
+    const el=document.createElement('span');
+    el.className='emoji-float';
+    el.textContent=emojiSet[Math.floor(Math.random()*emojiSet.length)];
+    el.style.left=Math.random()*90+5+'%';
+    el.style.bottom='-30px';
+    el.style.animationDelay=Math.random()*.6+'s';
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),4500);
+  }
+}
+</script>
+</body>
+</html>
